@@ -59,17 +59,23 @@ function updateScene(s){
 }
 let lastGestureView='';
 function renderGesture(s,now=performance.now()){
- const forecast=s.prediction(now),hit=scoreImpact(forecast.x,forecast.y),degrees=forecast.wind.angle*180/Math.PI,speed=forecast.wind.speed.toFixed(1);
+ const forecast=s.prediction(now),arrival=s.flight?s.flight.impactRotation:s.rotationAt(now+CONFIG.flightMs),hit=scoreRotatedImpact(forecast.x,forecast.y,arrival),degrees=forecast.wind.angle*180/Math.PI,speed=forecast.wind.speed.toFixed(1),timing=forecast.timing;
+ $('timingNeedle').style.left=`${timing.progress*100}%`;
  const direction=['右','右下','下','左下','左','左上','上','右上'][((Math.round(forecast.wind.angle/(Math.PI/4))%8)+8)%8];
- const view=[CITY.id,hit.target?.id,s.reading,!!s.flight,s.charging,!!gesture?.cancel,forecast.stable===1,Math.round(forecast.radius),Math.round(degrees),speed].join('|');
+ const view=[CITY.id,hit.target?.id,s.reading,!!s.flight,s.charging,!!gesture?.cancel,timing.stage,Math.floor(timing.held/100),Math.round(forecast.radius),Math.round(degrees),speed].join('|');
  if(view===lastGestureView)return;lastGestureView=view;
  $('aimReadout').textContent=hit.target?`预计：${hit.target.name}附近 · 圈内随机落点`:'预计范围接近盘外 · 注意脱靶';
  $('windArrow').style.transform=`rotate(${Math.round(degrees)}deg)`;
  $('windText').textContent=`吹向${direction} · ${speed} m/s`;
- const cancel=!!gesture?.cancel,stable=s.charging&&forecast.stable===1;
+ $('rotationReadout').textContent=`${s.rotationSpeed>=0?'↻ 顺时针':'↺ 逆时针'} ${(Math.abs(s.rotationSpeed)*180/Math.PI).toFixed(1)}°/秒`;
+ const stage=s.flight?'flying':s.reading?'reading':timing.stage;
+ const timingLabel={idle:'按住后，在绿区松手',settling:'蓄稳中',best:'最佳出手窗口',late:'窗口已过',fatigue:'疲劳扩散',flying:'已出手',reading:'阅读中'}[stage];
+ $('releaseTiming').dataset.stage=stage;
+ $('timingText').textContent=s.charging?`${(timing.held/1000).toFixed(1)}秒 · ${timingLabel}`:timingLabel;
+ const cancel=!!gesture?.cancel,stable=s.charging&&timing.best;
  const pad=$('throwPad');pad.classList.toggle('holding',s.charging);pad.classList.toggle('cancelling',cancel);pad.classList.toggle('stable',stable&&!cancel);
- $('padTitle').textContent=s.reading?'阅读名片后继续':cancel?'松手取消，不消耗飞镖':s.flight?'飞镖飞行中…':stable?'散布已缩小，松手投镖':s.charging?'稳住小圈，留意风向':'按住滑动，松手投镖';
- $('padHint').textContent=cancel?'滑回上方可继续瞄准':s.charging?'圈内随机落点 · 向下滑入取消区可收回':'停手缩小散布，逆着风向微调';
+ $('padTitle').textContent=s.reading?'阅读名片后继续':cancel?'松手取消，不消耗飞镖':s.flight?'飞镖飞行中…':stable?'最佳窗口 · 现在松手':s.charging?(timing.stage==='fatigue'?'手部疲劳 · 散布扩大':timing.stage==='late'?'窗口已过 · 尽快出手':'稳住圆圈，准备出手'):'按住滑动，松手投镖';
+ $('padHint').textContent=cancel?'滑回上方可继续瞄准':s.charging?'看准旋转提前量 · 向下滑入取消区可收回':'逆风微调，在绿色窗口松手';
  $('padRing').textContent=cancel?'×':stable?'≈':'↗';
 }
 
@@ -93,7 +99,7 @@ const scene=new DartScene($('board'),{
  gesture:renderGesture,stable:()=>{if(!gesture?.cancel&&navigator.vibrate)navigator.vibrate(12);}
 });
 function syncLayout(){scene.setLayout();}
-function start(){show('play');syncCityUI();syncLayout();$('feedback').textContent='按住下方区域滑动瞄准，松手投镖';scene.start();}
+function start(){show('play');syncCityUI();syncLayout();$('feedback').textContent='提前瞄准旋转目标，在绿色窗口松手';scene.start();}
 
 function renderBook(){
  const stats=progress();$('bookTitle').textContent=CITY.name+'旅行手账';

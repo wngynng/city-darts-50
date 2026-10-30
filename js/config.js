@@ -1,7 +1,15 @@
 'use strict';
-const CONFIG = Object.freeze({ darts:12, flightMs:480, settleMs:400, minHoldMs:140, scoreGoal:300, streakGoal:3, spreadStable:16, spreadMoving:30, windPixelsPerMps:6, saveKey:'cityDarts50Save_v1' });
+const CONFIG = Object.freeze({ darts:12, flightMs:480, settleMs:400, minHoldMs:140, scoreGoal:300, streakGoal:3, spreadStable:16, spreadMoving:30, spreadTired:38, bestStartMs:500, bestEndMs:1200, fatigueStartMs:1500, fatigueFullMs:3300, windPixelsPerMps:6, saveKey:'cityDarts50Save_v1' });
 function sampleAimDisk(radius,random=Math.random){const distance=radius*Math.sqrt(random()),angle=random()*Math.PI*2;return{x:Math.cos(angle)*distance,y:Math.sin(angle)*distance};}
 function windDeflection(angle,speed){return{x:Math.cos(angle)*speed*CONFIG.windPixelsPerMps,y:Math.sin(angle)*speed*CONFIG.windPixelsPerMps};}
+function aimTiming(heldMs,stillMs){
+ const clip=v=>Math.max(0,Math.min(1,v)),held=Math.max(0,heldMs),steady=clip(stillMs/CONFIG.settleMs),ready=clip(held/CONFIG.bestStartMs);
+ const fatigue=clip((held-CONFIG.fatigueStartMs)/(CONFIG.fatigueFullMs-CONFIG.fatigueStartMs));
+ const late=clip((held-CONFIG.bestEndMs)/(CONFIG.fatigueStartMs-CONFIG.bestEndMs));
+ const stage=held>=CONFIG.fatigueStartMs?'fatigue':held>CONFIG.bestEndMs?'late':held>=CONFIG.bestStartMs&&steady===1?'best':'settling';
+ return{held,steady,fatigue,stage,best:stage==='best',progress:clip(held/CONFIG.fatigueFullMs),radius:Math.min(48,CONFIG.spreadMoving+(CONFIG.spreadStable-CONFIG.spreadMoving)*steady*ready+late*2+fatigue*(CONFIG.spreadTired-CONFIG.spreadStable-2))};
+}
+function rotationSpeedForLevel(index,total=50){return(8+12*Math.max(0,Math.min(1,index/Math.max(1,total-1))))*Math.PI/180;}
 let CITY = { id:'chengdu', name:'成都', required:['hotpot','tea','alley'] };
 const CATALOG = [
 {id:'hotpot',name:'成都火锅',tag:'烟火滋味',color:'#bd5d42',description:'红汤翻滚，热气升腾。把成都的热闹滋味，收进一张小小的纪念卡。'},
@@ -77,10 +85,10 @@ const DARTBOARD = Object.freeze({
  get bullTopic(){return CITY.bullTopic;}
 
 });
-function boardPoint(number,radiusMm=130){
+function boardPoint(number,radiusMm=130,rotation=0){
  const index=DARTBOARD.numbers.indexOf(number);
  if(index<0)throw new Error('Unknown board number');
- const angle=-Math.PI/2+index*Math.PI/10;
+ const angle=-Math.PI/2+index*Math.PI/10+rotation;
  return {x:DARTBOARD.cx+Math.cos(angle)*radiusMm*DARTBOARD.scale,y:DARTBOARD.cy+Math.sin(angle)*radiusMm*DARTBOARD.scale};
 }
 function scoreImpact(x,y){
@@ -98,3 +106,5 @@ function scoreImpact(x,y){
  return {target:CATALOG.find(t=>t.id===b.topics[index]),points:number*multiplier,bull:false,number,multiplier,label:`${multiplier===3?'三倍':multiplier===2?'双倍':'单倍'} ${number}`};
 }
 function rateRound(round){const passed=CITY.required.every(id=>round.collected.has(id));return{passed,stars:passed?1+Number(round.score>=CONFIG.scoreGoal)+Number(round.maxStreak>=CONFIG.streakGoal):0};}
+function rotateBoardPoint(point,angle){const dx=point.x-DARTBOARD.cx,dy=point.y-DARTBOARD.cy;return{x:DARTBOARD.cx+dx*Math.cos(angle)-dy*Math.sin(angle),y:DARTBOARD.cy+dx*Math.sin(angle)+dy*Math.cos(angle)};}
+function scoreRotatedImpact(x,y,rotation){const p=rotateBoardPoint({x,y},-rotation);return scoreImpact(p.x,p.y);}

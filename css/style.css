@@ -198,4 +198,14 @@ body[data-city="chengdu"] .city-art{background:#d6dfc8}
 .aim-status .aim-readout{margin:0;font-size:11px}
 .wind-readout{display:flex;align-items:center;gap:7px;color:var(--ink);font-size:11px;white-space:nowrap;background:var(--soft);padding:3px 9px;border-radius:5px}
 #windArrow{display:inline-block;font-size:17px;color:var(--orange);line-height:1}
+.aim-status .aim-readout{flex-basis:100%;text-align:center;line-height:1.4}
+.rotation-readout{font-size:11px;color:var(--muted);white-space:nowrap}
+.release-timing{display:flex;align-items:center;justify-content:center;gap:12px;min-height:22px;margin:0 0 5px}
+.timing-track{position:relative;height:8px;width:min(190px,43vw);background:var(--soft);border:1px solid var(--line);border-radius:5px}
+.timing-window{position:absolute;left:15.1515%;width:21.2121%;height:100%;background:#79b587}
+.timing-needle{position:absolute;left:0;top:-4px;height:14px;width:3px;background:var(--orange);border-radius:2px;transform:translateX(-50%)}
+#timingText{font-size:10px;color:var(--muted);min-width:145px;white-space:nowrap}
+.release-timing[data-stage="best"] #timingText{color:var(--green);font-weight:bold}
+.release-timing[data-stage="best"] .timing-needle{background:var(--green)}
+.release-timing[data-stage="fatigue"] #timingText,.release-timing[data-stage="late"] #timingText{color:#b44e31}
 @media(max-width:600px){#cityChoices{max-height:350px}.target-card-scroll{padding:17px}.target-hero h2{font-size:24px}.target-story p{font-size:13px}.story-photo img{height:190px}}
