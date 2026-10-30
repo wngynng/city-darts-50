@@ -150,6 +150,7 @@ class DartScene {
  }
  frame(now){
   if(!this.active)return;
+  if(typeof portraitBlocked==='function'&&portraitBlocked()){if(!this.rotationPaused)syncPortrait();this.raf=requestAnimationFrame(t=>this.frame(t));return;}
   if(this.charging){this.settle=this.steadiness(now);if(this.timing(now).best&&!this.readyBuzz){this.readyBuzz=true;this.callbacks.stable();}}
   if(this.flight&&now-this.flight.start>=CONFIG.flightMs)this.land(now);
   this.draw(now);this.callbacks.gesture(this,now);

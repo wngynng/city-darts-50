@@ -101,7 +101,7 @@ const scene=new DartScene($('board'),{
  gesture:renderGesture,stable:()=>{if(!gesture?.cancel&&navigator.vibrate)navigator.vibrate(12);}
 });
 function syncLayout(){scene.setLayout();}
-function start(){show('play');syncCityUI();syncLayout();$('feedback').textContent='阅读本关规则，按住滑动、松手投镖';scene.start();}
+function start(){show('play');syncCityUI();syncLayout();$('feedback').textContent='阅读本关规则，按住滑动、松手投镖';scene.start();syncPortrait();}
 
 function renderBook(){
  const stats=progress();$('bookTitle').textContent=CITY.name+'旅行手账';
@@ -223,7 +223,7 @@ pad.addEventListener('pointerup',e=>{
 pad.addEventListener('pointercancel',e=>{if(e.pointerId===chargeOwner)cancelGesture('投掷已取消，飞镖未消耗');});
 pad.addEventListener('lostpointercapture',e=>{if(e.pointerId===chargeOwner)cancelGesture();});
 window.addEventListener('keydown',e=>{
- if(currentScreen!=='play'||!scene.active||$('result').open||$('targetCard').open||$('challengeZoom').open)return;
+ if(currentScreen!=='play'||!scene.active||$('result').open||$('targetCard').open||$('challengeZoom').open||portraitBlocked())return;
  if(e.code==='Escape'){e.preventDefault();cancelGesture('已收回飞镖');}
  else if(e.code==='Space'){
   if(document.activeElement!==pad&&document.activeElement!==document.body)return;
@@ -235,7 +235,7 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>{if(e.code==='Space'&&chargeOwner==='keyboard'){e.preventDefault();chargeOwner=null;scene.throw(inputTime(e));}});
 window.addEventListener('blur',()=>cancelGesture());
 document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelGesture();});
-window.addEventListener('resize',()=>{if(currentScreen==='play'){cancelGesture();syncLayout();}});
+window.addEventListener('resize',()=>{if(currentScreen==='play'){cancelGesture();syncLayout();syncPortrait();}});
 $('rankingSource').href=RANKING.source;
 syncCityUI();
 updateHome();
@@ -243,3 +243,10 @@ updateHome();
 $('challengePhotoButton').onclick=()=>{if(!scene.active||scene.reading||scene.flight)return;cancelGesture();scene.pauseRotation();$('challengeZoomImage').src=$('challengePhoto').src;$('challengeZoom').showModal();};
 $('closeChallengeZoom').onclick=()=>$('challengeZoom').close();
 $('challengeZoom').addEventListener('close',()=>{if(scene.active&&!scene.reading){scene.resumeRotation();pad.focus({preventScroll:true});}});
+
+let portraitResume=false,portraitPausedAt=null;
+function portraitBlocked(){return currentScreen==='play'&&matchMedia('(max-width:950px) and (max-height:600px) and (orientation:landscape)').matches;}
+function syncPortrait(){
+ if(portraitBlocked()){cancelGesture();if(portraitPausedAt===null)portraitPausedAt=performance.now();if(!scene.rotationPaused){portraitResume=true;scene.pauseRotation();}}
+ else{if(portraitPausedAt!==null&&scene.flight)scene.flight.start+=performance.now()-portraitPausedAt;portraitPausedAt=null;if(portraitResume){portraitResume=false;if(scene.active&&!scene.reading&&!$('challengeZoom').open)scene.resumeRotation();}}
+}
