@@ -107,6 +107,7 @@ function renderRealPhoto(container,id,enlarged=false){
  const photo=PHOTOS[id];container.replaceChildren();container.dataset.card=id;
  container.classList.toggle('artwork-photo',/文物|书画/.test(STORIES[id].category));
  const image=document.createElement('img');image.src=photo.src;image.alt=photo.caption;image.decoding='async';
+ if(photo.width&&photo.height){image.width=photo.width;image.height=photo.height;}
  // Main and enlarged images load immediately; collection images may load as they scroll into view.
  image.loading=container.classList.contains('collection-photo')?'lazy':'eager';
  if(enlarged)container.append(image);

@@ -158,14 +158,14 @@ body[data-city="chengdu"] .city-art{background:#d6dfc8}
 .photo-credit a{color:var(--muted);text-decoration:underline;text-underline-offset:2px}
 .photo-changes{display:block;margin-top:5px}
 .story-photo{margin:0 0 16px}
-.story-photo img{height:245px}
+.story-photo img{height:245px;object-fit:contain}
 .collection-photo{margin-bottom:12px}
 .collection-photo img{height:170px}
 .collection-photo .photo-caption{font-size:10px}
 .photo-viewer{padding:18px;width:min(1100px,96vw);max-height:94dvh;background:var(--surface)}
 .photo-viewer-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:14px;font-size:13px}
 .photo-viewer-toolbar button{white-space:nowrap}
-#largePhoto img{height:auto;max-height:70dvh;object-fit:contain}
+#largePhoto img{width:auto;max-width:100%;height:auto;max-height:70dvh;object-fit:contain;margin-inline:auto}
 #largePhoto figcaption{font-size:12px}
 #largePhoto .photo-credit{font-size:11px}
 @media(max-width:600px){.story-photo img{height:205px}.collection-photo img{height:130px}.photo-zoom{opacity:1;font-size:9px;padding:4px 6px}.photo-viewer{padding:12px}.photo-viewer-toolbar{font-size:11px;gap:10px}.photo-viewer-toolbar button{font-size:11px}}
