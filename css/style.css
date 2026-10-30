@@ -218,3 +218,29 @@ body[data-city="chengdu"] .city-art{background:#d6dfc8}
 #challengePhotoButton{flex-shrink:0;padding:4px;border:0;background:transparent}#challengePhotoButton small{display:block;font-size:10px}
 #challengeZoom{max-width:94vw;background:var(--surface);padding:16px}#challengeZoom img{display:block;width:auto;max-width:100%;max-height:72dvh;object-fit:contain;margin:12px auto}
 #challengeCue.budget-cue{max-height:65px;overflow:auto;padding-right:6px}.challenge-panel{flex-shrink:0}
+
+/* The wheel is the primary surface; the circular pad only starts the captured gesture. */
+.playing .app{padding-inline:2%;max-width:1600px}
+.playing header{height:44px}.playing .brand small,.playing .edition{display:none}
+#play{max-width:1440px;padding-top:6px}#play .game-heading{margin-bottom:4px}#play .game-heading h2{margin-top:2px;font-size:17px}#play .stats b{font-size:22px}
+#play .challenge-panel{min-height:0;max-height:94px;margin:4px 0 6px;padding:6px 12px;border-width:1px;border-radius:10px;overflow:auto;gap:10px}
+#play .challenge-panel>div{flex:1;min-width:0}#play .challenge-panel b{font-size:15px}#play .challenge-panel p{font-size:12px;margin:2px 0;line-height:1.4}
+#challengeProgress{display:inline;font-size:12px;margin-right:10px}#challengeCue{display:inline;font-size:12px;line-height:1.5}#challengeCue.budget-cue{display:block;max-height:34px}
+#play .challenge-panel img{width:82px;height:48px}#challengePhotoButton{padding:0}#challengePhotoButton small{font-size:9px}
+#play .task-strip:empty{display:none}#play .game-layout{gap:2px;flex-direction:column}#play .board-wrap{width:100%;min-height:230px;flex:1}
+#play .gesture-panel{width:min(100%,700px);flex:0 0 auto;margin:0 auto;align-self:center}
+#play .aim-status{margin:0;gap:3px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;font-size:11px}#play .aim-readout{font-size:11px;margin:0}#play .wind-readout{padding:2px 6px;font-size:11px}#play .rotation-readout{font-size:10px}
+#play .release-timing{margin:3px auto;max-width:440px;font-size:10px}#play #feedback{min-height:16px;font-size:10px;padding:0;line-height:1.4}
+.throw-dock{display:grid;grid-template-columns:minmax(0,1fr) 84px minmax(0,1fr);align-items:center;gap:14px;max-width:440px;margin:4px auto 0;height:84px}
+#play .throw-pad{width:84px;height:84px;border-radius:50%;border:2px solid var(--green);overflow:hidden;box-shadow:0 3px 12px #243f3818}
+#play .pad-main{height:100%;width:100%;display:flex;flex-direction:column;gap:0;padding:5px;background:transparent}
+#play .pad-ring{width:39px;height:39px;border:0;font-size:30px}#play .pad-caption{font-size:10px;font-weight:600}
+.pad-copy{text-align:right;min-width:0}.pad-copy b{display:block;font-size:12px;line-height:1.5}.pad-copy small{display:block;font-size:10px;line-height:1.4;margin-top:3px;color:var(--muted)}
+#play .cancel-zone{width:72px;height:42px;border:1px dashed var(--muted);border-radius:24px;font-size:11px;letter-spacing:0;justify-self:start}
+.throw-dock:has(.cancelling) .cancel-zone{background:#b76849;color:white;border-color:#b76849}
+#play .gesture-tip{display:none}#play .board-guide{margin:4px 0 2px;font-size:9px}#play .topic-guide{margin:0;font-size:10px}
+@media(max-width:600px){.playing .app{padding-inline:10px}#play .game-heading h2{font-size:14px}#play .game-heading .eyebrow{font-size:7px}#play .stats{gap:9px}#play .stats b{font-size:20px}#play .stats small{font-size:8px}
+ #play .challenge-panel{max-height:100px;padding:5px 8px}#play .challenge-panel p{font-size:11px}#play .challenge-panel b{font-size:13px}#challengeProgress,#challengeCue{font-size:11px}
+ .throw-dock{gap:10px;grid-template-columns:minmax(0,1fr) 80px minmax(0,1fr);height:80px}#play .throw-pad{width:80px;height:80px}.pad-copy b{font-size:11px}.pad-copy small{font-size:9px}#play .cancel-zone{width:64px;height:40px}
+}
+@media(orientation:landscape) and (max-height:650px){.playing header{height:36px}#play .challenge-panel{max-height:62px}#play .game-layout{flex-direction:row}#play .board-wrap{height:100%;min-height:170px;min-width:0}#play .gesture-panel{width:280px;flex:0 0 280px}.throw-dock{gap:6px}.pad-copy b{font-size:10px}.pad-copy small{font-size:9px}#play .cancel-zone{width:60px}#play .board-guide,#play .topic-guide{display:none}}

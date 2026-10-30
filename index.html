@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#24564d"><title>飞镖游中国 · 五十城旅行</title><link rel="stylesheet" href="css/style.css?v=b6552e505b"></head>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#24564d"><title>飞镖游中国 · 五十城旅行</title><link rel="stylesheet" href="css/style.css?v=67b5c8a9e6"></head>
 <body><div class="app"><header><a id="homeLink" href="#" class="brand"><i>↗</i><span>飞镖游中国<small>DARTS & POSTCARDS</small></span></a><div><span class="edition">五十城旅行 · 450 张文化名片</span><button id="soundBtn" aria-pressed="false">声音：开</button><button id="fullscreenBtn">全屏</button></div></header><main>
 <section id="home" class="screen"><div class="eyebrow">一镖一风景 / A LITTLE JOURNEY</div><div class="intro"><div><h1>下一站，<em id="homeCityName">成都。</em></h1><p id="homeIntro"></p></div><div class="postmark" id="cityPostmark"></div></div><div class="route-controls"><label>查找城市 <input id="citySearch" type="search" placeholder="城市名、省份或拼音"></label><span id="routeSummary"></span><a id="rankingSource" target="_blank" rel="noopener noreferrer">榜单来源 ↗</a></div><nav id="cityChoices" class="city-choices" aria-label="选择城市关卡"></nav><div class="home-grid"><article class="city-card"><div id="cityArt" class="city-art"></div><div class="caption"><span id="homeRegion"></span><span id="homeTheme"></span></div><div class="city-body"><div><h2 id="cityCardTitle"></h2><p>城市图标转盘 · 12 镖挑战 · 9 张特色卡</p></div><button id="startBtn" class="primary">启程，去成都 ↗</button></div></article><aside class="trip-note"><div class="eyebrow">YOUR FIRST ITINERARY</div><h2>这一站，怎么玩？</h2><ol><li><b>单指瞄准</b><span>按住下方滑动，观察落点圈、风向和转盘。</span></li><li><b>抓住出手窗口</b><span>稳住后在绿色窗口松手，提前瞄准移动目标。</span></li><li><b>集卡，盖章</b><span><span id="requiredIntro"></span></span></li></ol><div id="bestLine" class="best-line"></div><button id="bookBtn" class="text-btn">翻开旅行手账 →</button></aside></div><footer><span>不赶路，只收集沿途的小美好。</span><span>50 座城市 / 450 张文化名片</span></footer></section>
 <section id="play" class="screen" hidden>
@@ -12,9 +12,12 @@
       <div class="aim-status"><div id="aimReadout" class="aim-readout" aria-live="off">预计：圈内随机落点</div><div class="wind-readout" aria-label="风吹向箭头所指方向"><span id="windArrow" aria-hidden="true">➜</span><span id="windText">风向变化中</span></div><div id="rotationReadout" class="rotation-readout"></div></div>
       <div id="releaseTiming" class="release-timing" data-stage="idle"><div class="timing-track" aria-label="按住后0.5到1.2秒为最佳出手窗口"><span class="timing-window"></span><span id="timingNeedle" class="timing-needle"></span></div><span id="timingText">按住后，在绿区松手</span></div>
       <div id="feedback" role="status" aria-live="polite">按住下方区域滑动瞄准，松手投镖</div>
-      <div id="throwPad" class="throw-pad" role="button" tabindex="0" aria-label="单指投掷区，按住滑动瞄准，松手投镖；键盘按住空格用方向键瞄准，松开空格投掷，Escape取消" aria-disabled="false">
-        <div class="pad-main"><span id="padRing" class="pad-ring">↗</span><div><b id="padTitle">按住滑动，松手投镖</b><small id="padHint">逆风微调，在绿色窗口松手</small></div></div>
-        <div id="cancelZone" class="cancel-zone">↓ 滑到这里松手取消</div>
+      <div class="throw-dock">
+        <div class="pad-copy"><b id="padTitle">按住滑动，松手投镖</b><small id="padHint">手指可滑出圆圈继续瞄准</small></div>
+        <div id="throwPad" class="throw-pad" role="button" tabindex="0" aria-label="圆形投掷区，按住滑动瞄准，松手投镖；向右滑入取消区松手取消；键盘空格投掷，Escape取消" aria-disabled="false">
+          <div class="pad-main"><span id="padRing" class="pad-ring">↗</span><span class="pad-caption">按住投镖</span></div>
+        </div>
+        <div id="cancelZone" class="cancel-zone">取消 ↗</div>
       </div>
       <p class="gesture-tip">一根手指就够了 · 力度自动控制</p>
     </div>
@@ -44,5 +47,5 @@
 <script src="js/photos.js?v=889c7a7d76"></script>
 <script src="js/challenges.js?v=5de48d1b4a"></script>
 <script src="js/game.js?v=ddfa5ecbf4"></script>
-<script src="js/main.js?v=29c314a00d"></script>
+<script src="js/main.js?v=081d8e34ca"></script>
 </body></html>

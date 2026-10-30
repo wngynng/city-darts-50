@@ -76,7 +76,7 @@ function renderGesture(s,now=performance.now()){
  const cancel=!!gesture?.cancel,stable=s.charging&&timing.best;
  const pad=$('throwPad');pad.classList.toggle('holding',s.charging);pad.classList.toggle('cancelling',cancel);pad.classList.toggle('stable',stable&&!cancel);
  $('padTitle').textContent=s.reading?'阅读名片后继续':cancel?'松手取消，不消耗飞镖':s.flight?'飞镖飞行中…':stable?'最佳窗口 · 现在松手':s.charging?(timing.stage==='fatigue'?'手部疲劳 · 散布扩大':timing.stage==='late'?'窗口已过 · 尽快出手':'稳住圆圈，准备出手'):'按住滑动，松手投镖';
- $('padHint').textContent=cancel?'滑回上方可继续瞄准':s.charging?'看准旋转提前量 · 向下滑入取消区可收回':'逆风微调，在绿色窗口松手';
+ $('padHint').textContent=cancel?'滑回圆圈可继续瞄准':s.charging?'看准旋转提前量 · 向右滑入取消区可收回':'可滑出圆圈瞄准 · 右侧取消';
  $('padRing').textContent=cancel?'×':stable?'≈':'↗';
  if(s.challenge?.previewing(s,now)){$('padTitle').textContent='先记住目标顺序';$('padHint').textContent='倒计时结束后开始投镖';}
 }
@@ -208,7 +208,7 @@ pad.addEventListener('pointermove',e=>{
  if(!cancelled&&!gesture.cancel){
   const speed=Math.hypot(dx,dy)/Math.max(8,now-gesture.time);
   const gain=.3+Math.min(1.7,speed*1.7);
-  const area=pad.querySelector('.pad-main').getBoundingClientRect();
+  const boardRect=scene.canvas.getBoundingClientRect(),diameter=Math.max(320,Math.min(680,boardRect.width,boardRect.height)),area={width:diameter,height:diameter};
   scene.move(dx*gain*scene.width/area.width,dy*gain*scene.height/area.height,now);
  }
  gesture={x:e.clientX,y:e.clientY,time:now,cancel:cancelled};renderGesture(scene);
