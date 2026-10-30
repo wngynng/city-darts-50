@@ -61,9 +61,10 @@ function cityPanorama(city){
 }
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 class DartScene {
- constructor(canvas,callbacks){
+ constructor(canvas,callbacks,random=Math.random){
   this.canvas=canvas;this.ctx=canvas.getContext('2d');this.callbacks=callbacks;this.active=false;this.raf=0;
   this.images={};
+  this.random=random;this.wind={angle:0,speed:0,phase:0};this.swayPhase=[0,0];this.environmentEpoch=0;
 
   this.width=DARTBOARD.size;this.height=DARTBOARD.size;
   this.aim=boardPoint(20,130);
@@ -80,7 +81,7 @@ class DartScene {
    image.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(cardArt(card.id));
   }
  }
- start(){this.stop();this.prepareCityImages();this.active=true;this.reading=false;this.remaining=CONFIG.darts;this.score=0;this.hits=0;this.streak=0;this.maxStreak=0;this.collected=new Set();this.stuck=[];this.flight=null;this.charging=false;this.settle=0;this.lastMove=0;this.aim=boardPoint(20,130);this.callbacks.change(this);this.frame(performance.now());}
+ start(){this.stop();this.prepareCityImages();this.active=true;this.reading=false;this.remaining=CONFIG.darts;this.score=0;this.hits=0;this.streak=0;this.maxStreak=0;this.collected=new Set();this.stuck=[];this.flight=null;this.charging=false;this.settle=0;this.lastMove=0;this.aim=boardPoint(20,130);this.rollWind();this.callbacks.change(this);this.frame(performance.now());}
  stop(){this.active=false;this.reading=false;this.charging=false;this.settle=0;this.flight=null;cancelAnimationFrame(this.raf);}
  begin(now=performance.now()){
   if(!this.active||this.reading||this.flight||this.charging||this.remaining<=0)return false;
@@ -93,12 +94,27 @@ class DartScene {
   this.aim.y=clamp(this.aim.y+dy,45,this.height-65);
   if(Math.hypot(dx,dy)>.3){this.lastMove=now;this.settle=0;this.readyBuzz=false;}
  }
- aimPoint(){return {...this.aim};}
+ rollWind(now=performance.now()){
+  this.environmentEpoch=now;
+  this.wind={angle:this.random()*Math.PI*2,speed:1.2+this.random()*3.6,phase:this.random()*Math.PI*2};
+  this.swayPhase=[this.random()*Math.PI*2,this.random()*Math.PI*2];
+ }
+ steadiness(now){return this.charging?clamp((now-this.lastMove)/CONFIG.settleMs,0,1):0;}
+ prediction(now=performance.now()){
+  if(this.flight)return this.flight.prediction;
+  const t=Math.max(0,now-this.environmentEpoch),stable=this.steadiness(now),phase=this.wind.phase;
+  const angle=this.wind.angle+.12*Math.sin(t/1600+phase),speed=this.wind.speed*(1+.18*Math.sin(t/1100+phase*.7));
+  const wind=windDeflection(angle,speed),amplitude=3+5*(1-stable),[p,q]=this.swayPhase;
+  const sway={x:amplitude*(.65*Math.sin(t/580+p)+.35*Math.sin(t/310+q)),y:amplitude*(.65*Math.cos(t/670+q)+.35*Math.sin(t/370+p))};
+  return{x:this.aim.x+wind.x+sway.x,y:this.aim.y+wind.y+sway.y,radius:CONFIG.spreadStable+(CONFIG.spreadMoving-CONFIG.spreadStable)*(1-stable),wind:{...wind,angle,speed},stable};
+ }
+ aimPoint(now=performance.now()){const p=this.prediction(now);return{x:p.x,y:p.y};}
  cancel(){this.charging=false;this.settle=0;this.callbacks.change(this);}
  throw(now=performance.now()){
   if(!this.active||this.reading||!this.charging||this.flight)return false;
   if(now-this.holdStart<CONFIG.minHoldMs){this.cancel();this.callbacks.message('按住滑动瞄准，再松手投镖');return false;}
-  const aim=this.aimPoint();this.flight={start:now,x:aim.x,y:aim.y};
+  const prediction=this.prediction(now),offset=sampleAimDisk(prediction.radius,this.random);
+  this.flight={start:now,x:prediction.x+offset.x,y:prediction.y+offset.y,prediction};
   this.remaining--;this.charging=false;this.settle=0;
   this.callbacks.sound('throw');this.callbacks.message('飞镖飞行中…');this.callbacks.change(this);return true;
  }
@@ -113,18 +129,20 @@ class DartScene {
   this.callbacks.change(this);
   if(hit.target)this.callbacks.introduce(hit.target,{points:hit.points,bull:hit.bull,label:hit.label,firstThisRound});
   else if(this.remaining===0){this.active=false;this.callbacks.finish(this);}
+  else this.rollWind(now);
  }
  continueAfterStory(){
   if(!this.active||!this.reading)return;
   this.reading=false;
   if(this.remaining===0){this.active=false;this.callbacks.finish(this);}
+  else this.rollWind();
   this.callbacks.change(this);
  }
  frame(now){
   if(!this.active)return;
-  if(this.charging){this.settle=clamp((now-this.lastMove)/CONFIG.settleMs,0,1);if(this.settle===1&&!this.readyBuzz){this.readyBuzz=true;this.callbacks.stable();}}
+  if(this.charging){this.settle=this.steadiness(now);if(this.settle===1&&!this.readyBuzz){this.readyBuzz=true;this.callbacks.stable();}}
   if(this.flight&&now-this.flight.start>=CONFIG.flightMs)this.land(now);
-  this.draw(now);this.callbacks.gesture(this);
+  this.draw(now);this.callbacks.gesture(this,now);
   if(this.active)this.raf=requestAnimationFrame(t=>this.frame(t));
  }
  drawDart(ctx,x,y,scale,shake=0){ctx.save();ctx.translate(x,y);ctx.rotate(-.5+shake);ctx.scale(scale,scale);ctx.shadowColor='#25372e50';ctx.shadowBlur=3;ctx.shadowOffsetX=4;ctx.shadowOffsetY=4;ctx.strokeStyle='#cbd3ce';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,-43);ctx.stroke();ctx.fillStyle='#c26848';ctx.beginPath();ctx.moveTo(0,-29);ctx.lineTo(-12,-49);ctx.lineTo(-10,-68);ctx.lineTo(0,-53);ctx.lineTo(10,-68);ctx.lineTo(12,-49);ctx.closePath();ctx.fill();ctx.strokeStyle='#466357';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(0,-33);ctx.stroke();ctx.restore();}
@@ -203,7 +221,7 @@ class DartScene {
   c.clearRect(0,0,this.width,this.height);c.drawImage(this.boardCache,0,0);
   for(const d of this.stuck){const age=Math.max(0,now-d.time);this.drawDart(c,d.x,d.y,.72,age<400?Math.sin(age*.08)*.12*(1-age/400):0);if(age<700){c.strokeStyle=d.hit?'#f9f1c9':'#8e644a';c.lineWidth=2;c.globalAlpha=1-age/700;c.beginPath();c.arc(d.x,d.y,8+age/24,0,Math.PI*2);c.stroke();c.globalAlpha=1;}}
   if(this.flight){const f=this.flight,t=clamp((now-f.start)/CONFIG.flightMs,0,1),x=this.width*.55+(f.x-this.width*.55)*t,y=this.height+30+(f.y-this.height-30)*t-Math.sin(t*Math.PI)*85;this.drawDart(c,x,y,1.9-t*1.18);}
-  else if(this.active){const a=this.aimPoint(now);c.strokeStyle=this.charging&&this.settle===1?'#f4ce58':'#f4f6ee';c.lineWidth=2;c.beginPath();c.arc(a.x,a.y,10+(this.charging?12*(1-this.settle):0),0,Math.PI*2);c.stroke();c.strokeStyle='#fff9e8';c.lineWidth=2;c.beginPath();c.arc(a.x,a.y,12,0,Math.PI*2);c.stroke();c.fillStyle='#233e35';c.beginPath();c.arc(a.x,a.y,2.5,0,Math.PI*2);c.fill();
+  else if(this.active){const a=this.prediction(now),stable=this.charging&&a.stable===1;c.save();c.beginPath();c.arc(a.x,a.y,a.radius,0,Math.PI*2);c.fillStyle=stable?'#f4ce584d':'#fff9e84d';c.fill();c.strokeStyle='#263d3799';c.lineWidth=5;c.stroke();c.strokeStyle=stable?'#ffd56b':'#fff9e8';c.lineWidth=2.5;c.setLineDash([5,3]);c.stroke();c.restore();
    c.save();c.translate(this.width-85,this.height-1);c.fillStyle='#d6aa7b';c.beginPath();c.ellipse(0,0,25,48,-.3,0,Math.PI*2);c.fill();c.restore();this.drawDart(c,this.width-100,this.height-38+(this.charging?6:0),1.2);
   }
  }

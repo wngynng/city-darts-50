@@ -58,15 +58,19 @@ function updateScene(s){
  renderGesture(s);
 }
 let lastGestureView='';
-function renderGesture(s){
- const view=[CITY.id,s.aim?.x,s.aim?.y,s.reading,!!s.flight,s.charging,!!gesture?.cancel,s.settle===1].join('|');
+function renderGesture(s,now=performance.now()){
+ const forecast=s.prediction(now),hit=scoreImpact(forecast.x,forecast.y),degrees=forecast.wind.angle*180/Math.PI,speed=forecast.wind.speed.toFixed(1);
+ const direction=['右','右下','下','左下','左','左上','上','右上'][((Math.round(forecast.wind.angle/(Math.PI/4))%8)+8)%8];
+ const view=[CITY.id,hit.target?.id,s.reading,!!s.flight,s.charging,!!gesture?.cancel,forecast.stable===1,Math.round(forecast.radius),Math.round(degrees),speed].join('|');
  if(view===lastGestureView)return;lastGestureView=view;
- if(s.aim){const hit=scoreImpact(s.aim.x,s.aim.y);$('aimReadout').textContent=hit.target?`${hit.label} = ${hit.points} 分 · ${hit.target.name}`:'盘外 · 0 分';}
- const cancel=!!gesture?.cancel,stable=s.charging&&s.settle===1;
+ $('aimReadout').textContent=hit.target?`预计：${hit.target.name}附近 · 圈内随机落点`:'预计范围接近盘外 · 注意脱靶';
+ $('windArrow').style.transform=`rotate(${Math.round(degrees)}deg)`;
+ $('windText').textContent=`吹向${direction} · ${speed} m/s`;
+ const cancel=!!gesture?.cancel,stable=s.charging&&forecast.stable===1;
  const pad=$('throwPad');pad.classList.toggle('holding',s.charging);pad.classList.toggle('cancelling',cancel);pad.classList.toggle('stable',stable&&!cancel);
- $('padTitle').textContent=s.reading?'阅读名片后继续':cancel?'松手取消，不消耗飞镖':s.flight?'飞镖飞行中…':stable?'已稳住，松手投镖':s.charging?'滑动瞄准，松手投镖':'按住滑动，松手投镖';
- $('padHint').textContent=cancel?'滑回上方可继续瞄准':s.charging?'向下滑入取消区可收回':'停手片刻，准星自动稳住';
- $('padRing').textContent=cancel?'×':stable?'✓':'↗';
+ $('padTitle').textContent=s.reading?'阅读名片后继续':cancel?'松手取消，不消耗飞镖':s.flight?'飞镖飞行中…':stable?'散布已缩小，松手投镖':s.charging?'稳住小圈，留意风向':'按住滑动，松手投镖';
+ $('padHint').textContent=cancel?'滑回上方可继续瞄准':s.charging?'圈内随机落点 · 向下滑入取消区可收回':'停手缩小散布，逆着风向微调';
+ $('padRing').textContent=cancel?'×':stable?'≈':'↗';
 }
 
 function finish(s){
@@ -173,6 +177,7 @@ $('soundBtn').onclick=()=>{save.muted=!save.muted;persist();syncSound();};syncSo
 $('fullscreenBtn').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else toast('当前浏览器不支持全屏，可直接游玩');}catch{toast('全屏暂不可用，可直接游玩');}};
 document.addEventListener('fullscreenchange',()=>$('fullscreenBtn').textContent=document.fullscreenElement?'退出全屏':'全屏');
 const pad=$('throwPad');
+function inputTime(e){const now=performance.now();return Number.isFinite(e.timeStamp)&&Math.abs(e.timeStamp-now)<60000?e.timeStamp:now;}
 function inCancelZone(x,y){const r=$('cancelZone').getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}
 function cancelGesture(message){
  const owner=chargeOwner;chargeOwner=null;gesture=null;
@@ -184,13 +189,13 @@ function cancelGesture(message){
 pad.addEventListener('contextmenu',e=>e.preventDefault());
 pad.addEventListener('pointerdown',e=>{
  if(e.button!==0||chargeOwner!==null||!e.isPrimary||inCancelZone(e.clientX,e.clientY))return;
- e.preventDefault();if(!scene.begin())return;
- chargeOwner=e.pointerId;gesture={x:e.clientX,y:e.clientY,time:performance.now(),cancel:false};
+ e.preventDefault();if(!scene.begin(inputTime(e)))return;
+ chargeOwner=e.pointerId;gesture={x:e.clientX,y:e.clientY,time:inputTime(e),cancel:false};
  pad.setPointerCapture(e.pointerId);pad.focus({preventScroll:true});renderGesture(scene);
 });
 pad.addEventListener('pointermove',e=>{
  if(e.pointerId!==chargeOwner||!gesture)return;e.preventDefault();
- const now=performance.now(),dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
+ const now=inputTime(e),dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
  const cancelled=inCancelZone(e.clientX,e.clientY);
  if(!cancelled&&!gesture.cancel){
   const speed=Math.hypot(dx,dy)/Math.max(8,now-gesture.time);
@@ -204,7 +209,7 @@ pad.addEventListener('pointerup',e=>{
  if(e.pointerId!==chargeOwner)return;e.preventDefault();
  const cancelled=inCancelZone(e.clientX,e.clientY);chargeOwner=null;gesture=null;
  if(pad.hasPointerCapture(e.pointerId))pad.releasePointerCapture(e.pointerId);
- if(cancelled){scene.cancel();$('feedback').textContent='已收回飞镖 · 按住即可重新瞄准';}else scene.throw();
+ if(cancelled){scene.cancel();$('feedback').textContent='已收回飞镖 · 按住即可重新瞄准';}else scene.throw(inputTime(e));
  renderGesture(scene);
 });
 pad.addEventListener('pointercancel',e=>{if(e.pointerId===chargeOwner)cancelGesture('投掷已取消，飞镖未消耗');});
@@ -214,12 +219,12 @@ window.addEventListener('keydown',e=>{
  if(e.code==='Escape'){e.preventDefault();cancelGesture('已收回飞镖');}
  else if(e.code==='Space'){
   if(document.activeElement!==pad&&document.activeElement!==document.body)return;
-  e.preventDefault();if(!e.repeat&&chargeOwner===null&&scene.begin())chargeOwner='keyboard';
+  e.preventDefault();if(!e.repeat&&chargeOwner===null&&scene.begin(inputTime(e)))chargeOwner='keyboard';
  }else if(chargeOwner==='keyboard'&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code)){
   e.preventDefault();const step=e.shiftKey?2:10;scene.move(e.code==='ArrowLeft'?-step:e.code==='ArrowRight'?step:0,e.code==='ArrowUp'?-step:e.code==='ArrowDown'?step:0);
  }
 });
-window.addEventListener('keyup',e=>{if(e.code==='Space'&&chargeOwner==='keyboard'){e.preventDefault();chargeOwner=null;scene.throw();}});
+window.addEventListener('keyup',e=>{if(e.code==='Space'&&chargeOwner==='keyboard'){e.preventDefault();chargeOwner=null;scene.throw(inputTime(e));}});
 window.addEventListener('blur',()=>cancelGesture());
 document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelGesture();});
 window.addEventListener('resize',()=>{if(currentScreen==='play'){cancelGesture();syncLayout();}});

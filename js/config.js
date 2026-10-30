@@ -1,5 +1,7 @@
 'use strict';
-const CONFIG = Object.freeze({ darts:12, flightMs:480, settleMs:400, minHoldMs:140, scoreGoal:300, streakGoal:3, saveKey:'cityDarts50Save_v1' });
+const CONFIG = Object.freeze({ darts:12, flightMs:480, settleMs:400, minHoldMs:140, scoreGoal:300, streakGoal:3, spreadStable:16, spreadMoving:30, windPixelsPerMps:6, saveKey:'cityDarts50Save_v1' });
+function sampleAimDisk(radius,random=Math.random){const distance=radius*Math.sqrt(random()),angle=random()*Math.PI*2;return{x:Math.cos(angle)*distance,y:Math.sin(angle)*distance};}
+function windDeflection(angle,speed){return{x:Math.cos(angle)*speed*CONFIG.windPixelsPerMps,y:Math.sin(angle)*speed*CONFIG.windPixelsPerMps};}
 let CITY = { id:'chengdu', name:'成都', required:['hotpot','tea','alley'] };
 const CATALOG = [
 {id:'hotpot',name:'成都火锅',tag:'烟火滋味',color:'#bd5d42',description:'红汤翻滚，热气升腾。把成都的热闹滋味，收进一张小小的纪念卡。'},

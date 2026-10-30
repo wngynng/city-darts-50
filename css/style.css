@@ -194,4 +194,8 @@ body[data-city="chengdu"] .city-art{background:#d6dfc8}
 .target-card-scroll{padding:20px 24px 16px}
 #cityChoices{max-height:380px;overflow-y:auto;align-content:start;padding:3px}
 .route-controls{justify-content:space-between}
+.aim-status{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 14px;flex-shrink:0;margin-bottom:6px}
+.aim-status .aim-readout{margin:0;font-size:11px}
+.wind-readout{display:flex;align-items:center;gap:7px;color:var(--ink);font-size:11px;white-space:nowrap;background:var(--soft);padding:3px 9px;border-radius:5px}
+#windArrow{display:inline-block;font-size:17px;color:var(--orange);line-height:1}
 @media(max-width:600px){#cityChoices{max-height:350px}.target-card-scroll{padding:17px}.target-hero h2{font-size:24px}.target-story p{font-size:13px}.story-photo img{height:190px}}
