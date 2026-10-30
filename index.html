@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#24564d"><title>飞镖游中国 · 五十城旅行</title><link rel="stylesheet" href="css/style.css?v=637ce5b18e"></head>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#24564d"><title>飞镖游中国 · 五十城旅行</title><link rel="stylesheet" href="css/style.css?v=b6552e505b"></head>
 <body><div class="app"><header><a id="homeLink" href="#" class="brand"><i>↗</i><span>飞镖游中国<small>DARTS & POSTCARDS</small></span></a><div><span class="edition">五十城旅行 · 450 张文化名片</span><button id="soundBtn" aria-pressed="false">声音：开</button><button id="fullscreenBtn">全屏</button></div></header><main>
 <section id="home" class="screen"><div class="eyebrow">一镖一风景 / A LITTLE JOURNEY</div><div class="intro"><div><h1>下一站，<em id="homeCityName">成都。</em></h1><p id="homeIntro"></p></div><div class="postmark" id="cityPostmark"></div></div><div class="route-controls"><label>查找城市 <input id="citySearch" type="search" placeholder="城市名、省份或拼音"></label><span id="routeSummary"></span><a id="rankingSource" target="_blank" rel="noopener noreferrer">榜单来源 ↗</a></div><nav id="cityChoices" class="city-choices" aria-label="选择城市关卡"></nav><div class="home-grid"><article class="city-card"><div id="cityArt" class="city-art"></div><div class="caption"><span id="homeRegion"></span><span id="homeTheme"></span></div><div class="city-body"><div><h2 id="cityCardTitle"></h2><p>城市图标转盘 · 12 镖挑战 · 9 张特色卡</p></div><button id="startBtn" class="primary">启程，去成都 ↗</button></div></article><aside class="trip-note"><div class="eyebrow">YOUR FIRST ITINERARY</div><h2>这一站，怎么玩？</h2><ol><li><b>单指瞄准</b><span>按住下方滑动，观察落点圈、风向和转盘。</span></li><li><b>抓住出手窗口</b><span>稳住后在绿色窗口松手，提前瞄准移动目标。</span></li><li><b>集卡，盖章</b><span><span id="requiredIntro"></span></span></li></ol><div id="bestLine" class="best-line"></div><button id="bookBtn" class="text-btn">翻开旅行手账 →</button></aside></div><footer><span>不赶路，只收集沿途的小美好。</span><span>50 座城市 / 450 张文化名片</span></footer></section>
 <section id="play" class="screen" hidden>
   <div class="game-heading"><div><div class="eyebrow" id="playStop"></div><h2 id="playTitle"></h2></div><div class="stats"><div><small>剩余飞镖</small><b id="dartsText">12</b><span> / 12</span></div><div><small>本局得分</small><b id="scoreText">0</b></div><button id="exitBtn">返回</button></div></div>
+  <aside id="challengePanel" class="challenge-panel"><div><b id="challengeTitle"></b><p id="challengeRule"></p><div id="challengeProgress" role="status"></div><div id="challengeCue"></div></div><button id="challengePhotoButton" type="button" hidden aria-label="放大本题照片"><img id="challengePhoto" alt="本题参考照片" hidden><small>放大照片 ↗</small></button></aside>
   <div id="tasks" class="task-strip" aria-label="本局打卡清单"></div>
   <div class="game-layout">
     <div class="board-wrap"><canvas id="board" width="720" height="720" aria-label="城市文化图标飞镖转盘；在下方投掷区按住滑动瞄准，松手投镖"></canvas><div class="board-label">成都 · 城市飞镖盘</div></div>
@@ -19,7 +20,7 @@
     </div>
   </div>
   <div class="board-guide"><span>单倍 ×1</span><span>外环 ×2</span><span>内环 ×3</span><span>外牛眼 25</span><span>中心牛眼 50</span></div>
-  <details class="topic-guide"><summary>城市名片分区与挑战说明</summary><div id="topicLegend"></div><p>★ 集齐三张指定卡　★ 通关且达到 300 分　★ 通关且连续 3 次中心牛眼</p></details>
+  <details class="topic-guide"><summary>城市名片分区与挑战说明</summary><div id="topicLegend"></div><p>★ 完成本关任务　★ 通关且达到 300 分　★ 通关且任务失误不超过 2 次</p></details>
 </section>
 <section id="book" class="screen" hidden><div class="section-heading"><div><div class="eyebrow">MY TRAVEL JOURNAL</div><h1 id="bookTitle">旅行手账</h1><p id="bookSummary"></p></div><button id="bookBack">返回首页</button></div><div class="book-toolbar"><nav id="bookCityTabs" aria-label="当前手账城市"></nav><label>旅行城市 <select id="bookCitySelect"></select></label><label>名片类别 <select id="categoryFilter"><option value="all">全部类别</option></select></label></div><div id="collection" class="collection-grid"></div><p class="journal-note">命中过的纪念卡会永久留在手账里，重试也不会丢失。</p></section>
 </main></div><dialog id="result"><div class="result-top"><div class="eyebrow" id="resultCityLabel"></div><div id="resultStamp" class="result-stamp"></div><h2 id="resultTitle"></h2><p id="resultDescription"></p></div><div id="resultStats" class="result-stats"></div><div id="resultStars" class="result-stars"></div><p id="resultCards"></p><div class="result-actions"><button id="retryBtn" class="primary">再逛一次 ↗</button><button id="nextCityBtn" class="primary" hidden>下一站 →</button><button id="resultBook">查看手账</button><button id="resultHome">返回首页</button></div></dialog><div id="toast" role="status"></div>
@@ -35,11 +36,13 @@
   <div class="target-card-footer"><span id="targetSaved">已收入旅行手账，随时可回看</span><button id="continueBtn" class="primary" autofocus>继续投镖 ↗</button></div>
 </dialog>
 <dialog id="photoViewer" class="photo-viewer" aria-label="查看真实图片"><div class="photo-viewer-toolbar"><span id="photoViewerTitle"></span><button id="closePhotoViewer">关闭大图 ×</button></div><figure id="largePhoto" class="real-photo"></figure></dialog>
-<script src="js/config.js?v=dae591471d"></script>
+<dialog id="challengeZoom"><button id="closeChallengeZoom">继续挑战 ×</button><img id="challengeZoomImage" alt="本题参考照片"></dialog>
+<script src="js/config.js?v=53213d6af1"></script>
 <script src="js/cities.js?v=d3c622a90c"></script>
 <script src="js/world.js?v=68e05d73ea"></script>
 <script src="js/briefs.js?v=ee8163ee6e"></script>
 <script src="js/photos.js?v=889c7a7d76"></script>
-<script src="js/game.js?v=53271066a3"></script>
-<script src="js/main.js?v=ce107b16df"></script>
+<script src="js/challenges.js?v=5de48d1b4a"></script>
+<script src="js/game.js?v=ddfa5ecbf4"></script>
+<script src="js/main.js?v=29c314a00d"></script>
 </body></html>

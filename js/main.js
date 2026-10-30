@@ -25,7 +25,7 @@ function visibleRoute(){
  if(query)return CITIES.filter(city=>[city.name,city.en,city.region,city.theme].join(' ').toLowerCase().includes(query));
  return CITIES;
 }
-function routeButtons(cities=visibleRoute()){return cities.map(city=>{const i=CITIES.indexOf(city);return `<button data-city="${city.id}" class="city-choice ${CITY.id===city.id?'selected':''}" aria-pressed="${CITY.id===city.id}"><span class="stop-number">${String(i+1).padStart(2,'0')}</span><span><b>${city.name}</b><small>${city.theme} · ${city.cardIds.filter(id=>save.cards.includes(id)).length} / 9 张</small></span><span class="route-stars">${'★'.repeat(save.cities[city.id].bestStars)}${'☆'.repeat(3-save.cities[city.id].bestStars)}</span></button>`;}).join('');}
+function routeButtons(cities=visibleRoute()){return cities.map(city=>{const i=CITIES.indexOf(city);return `<button data-city="${city.id}" class="city-choice ${CITY.id===city.id?'selected':''}" aria-pressed="${CITY.id===city.id}"><span class="stop-number">${String(i+1).padStart(2,'0')}</span><span><b>${city.name}</b><small>${challengeSpec(i).name} · ${city.cardIds.filter(id=>save.cards.includes(id)).length} / 9 张</small></span><span class="route-stars">${'★'.repeat(save.cities[city.id].bestStars)}${'☆'.repeat(3-save.cities[city.id].bestStars)}</span></button>`;}).join('');}
 function updateHome(){
  const i=CITIES.indexOf(CITY),stats=progress();
  $('homeCityName').textContent=CITY.name+'。';$('homeIntro').textContent=CITY.intro;
@@ -33,7 +33,7 @@ function updateHome(){
  $('cityChoices').innerHTML=routeButtons()||'<p class=empty-route>没有找到这座城市，试试城市名或省份。</p>';$('routeSummary').textContent=`已打卡 ${Object.values(save.cities).filter(city=>city.bestStars>0).length} / 50 城`; $('homeRegion').textContent=`${CITY.region} / ${CITY.en}`;
  $('homeTheme').textContent=CITY.theme;$('cityCardTitle').textContent=CITY.name+'来信';$('cityArt').innerHTML=cityArt();
  $('startBtn').textContent=`启程，去${CITY.name} ↗`;
- $('requiredIntro').textContent='本局收集'+CITY.required.map(id=>CATALOG.find(t=>t.id===id).name).join('、')+'即可通关。';
+ const challenge=new TravelChallenge(CITY,i);$('requiredIntro').textContent=challenge.spec.name+'：'+challenge.rule;
  $('bestLine').textContent=`本城 ${collectedCount()} / 9 张 · 最佳 ${stats.bestScore} 分 · ${'★'.repeat(stats.bestStars)}${'☆'.repeat(3-stats.bestStars)} · 全国累计 ${save.cards.length} / 450 张`;
 }
 function syncCityUI(){
@@ -50,19 +50,20 @@ function selectCity(id){
  if(currentScreen==='book')renderBook();
 }
 
-function show(screen){cancelGesture();scene.stop();storyInRound=false;if($('photoViewer').open)$('photoViewer').close();if($('targetCard').open)$('targetCard').close();document.body.classList.toggle('playing',screen==='play');if($('result').open)$('result').close();currentScreen=screen;for(const name of ['home','play','book'])$(name).hidden=name!==screen;if(screen==='home')updateHome();if(screen==='book')renderBook();window.scrollTo(0,0);}
+function show(screen){cancelGesture();scene.stop();if($('challengeZoom').open)$('challengeZoom').close();storyInRound=false;if($('photoViewer').open)$('photoViewer').close();if($('targetCard').open)$('targetCard').close();document.body.classList.toggle('playing',screen==='play');if($('result').open)$('result').close();currentScreen=screen;for(const name of ['home','play','book'])$(name).hidden=name!==screen;if(screen==='home')updateHome();if(screen==='book')renderBook();window.scrollTo(0,0);}
 function updateScene(s){
  $('dartsText').textContent=s.remaining;$('scoreText').textContent=s.score;
- $('tasks').innerHTML=CITY.required.map(id=>{const t=CATALOG.find(t=>t.id===id),done=s.collected.has(id);return `<div class="task ${done?'done':''}">${done?'✓':'○'} ${t.name}</div>`;}).join('');
+ $('tasks').innerHTML=(s.challenge?[]:CITY.required).map(id=>{const t=CATALOG.find(t=>t.id===id),done=s.collected.has(id);return `<div class="task ${done?'done':''}">${done?'✓':'○'} ${t.name}</div>`;}).join('');
  $('throwPad').setAttribute('aria-disabled',String(s.reading||!!s.flight||s.remaining===0||!s.active));
  renderGesture(s);
 }
 let lastGestureView='';
 function renderGesture(s,now=performance.now()){
+ renderChallenge(s,now);
  const forecast=s.prediction(now),arrival=s.flight?s.flight.impactRotation:s.rotationAt(now+CONFIG.flightMs),hit=scoreRotatedImpact(forecast.x,forecast.y,arrival),degrees=forecast.wind.angle*180/Math.PI,speed=forecast.wind.speed.toFixed(1),timing=forecast.timing;
  $('timingNeedle').style.left=`${timing.progress*100}%`;
  const direction=['右','右下','下','左下','左','左上','上','右上'][((Math.round(forecast.wind.angle/(Math.PI/4))%8)+8)%8];
- const view=[CITY.id,hit.target?.id,s.reading,!!s.flight,s.charging,!!gesture?.cancel,timing.stage,Math.floor(timing.held/100),Math.round(forecast.radius),Math.round(degrees),speed].join('|');
+ const view=[s.challenge?.previewing(s,now),CITY.id,hit.target?.id,s.reading,!!s.flight,s.charging,!!gesture?.cancel,timing.stage,Math.floor(timing.held/100),Math.round(forecast.radius),Math.round(degrees),speed].join('|');
  if(view===lastGestureView)return;lastGestureView=view;
  $('aimReadout').textContent=hit.target?`预计：${hit.target.name}附近 · 圈内随机落点`:'预计范围接近盘外 · 注意脱靶';
  $('windArrow').style.transform=`rotate(${Math.round(degrees)}deg)`;
@@ -77,16 +78,17 @@ function renderGesture(s,now=performance.now()){
  $('padTitle').textContent=s.reading?'阅读名片后继续':cancel?'松手取消，不消耗飞镖':s.flight?'飞镖飞行中…':stable?'最佳窗口 · 现在松手':s.charging?(timing.stage==='fatigue'?'手部疲劳 · 散布扩大':timing.stage==='late'?'窗口已过 · 尽快出手':'稳住圆圈，准备出手'):'按住滑动，松手投镖';
  $('padHint').textContent=cancel?'滑回上方可继续瞄准':s.charging?'看准旋转提前量 · 向下滑入取消区可收回':'逆风微调，在绿色窗口松手';
  $('padRing').textContent=cancel?'×':stable?'≈':'↗';
+ if(s.challenge?.previewing(s,now)){$('padTitle').textContent='先记住目标顺序';$('padHint').textContent='倒计时结束后开始投镖';}
 }
 
 function finish(s){
  const rating=rateRound(s),stats=progress();stats.bestScore=Math.max(stats.bestScore,s.score);stats.bestStars=Math.max(stats.bestStars,rating.stars);stats.visits++;persist();
  $('resultStamp').textContent=CITY.name+(rating.passed?' · 已打卡':' · 再会');
  $('resultTitle').textContent=rating.passed?`把${CITY.name}，装进回忆里。`:'还有风景，等你收集。';
- $('resultDescription').textContent=rating.passed?'城市印章已收入手账，可以继续下一站或再次挑战。':'已收集的纪念卡会保留，下一局重新完成三项打卡即可通关。';
+ $('resultDescription').textContent=rating.passed?'城市印章已收入手账，可以继续下一站或再次挑战。':'名片已保留。'+(s.challenge?.rule||'重试本关挑战。');
  $('resultStats').innerHTML=`<div><b>${s.score}</b><span>本局得分</span></div><div><b>${s.hits} / 12</b><span>命中飞镖</span></div><div><b>${s.collected.size} / 9</b><span>本局特色卡</span></div>`;
- const goals=[rating.passed,rating.passed&&s.score>=CONFIG.scoreGoal,rating.passed&&s.maxStreak>=CONFIG.streakGoal];
- $('resultStars').innerHTML=[`集齐指定卡（${CITY.required.filter(id=>s.collected.has(id)).length} / 3）`,`通关且达到 ${CONFIG.scoreGoal} 分（${s.score}）`,`通关且连续 3 次中心牛眼（最佳 ${s.maxStreak} 次）`].map((text,i)=>`<div>${goals[i]?'★':'☆'} ${text}</div>`).join('');
+ const goals=[rating.passed,rating.passed&&s.score>=CONFIG.scoreGoal,rating.passed&&(s.challenge?s.challenge.errors<=2:s.maxStreak>=CONFIG.streakGoal)];
+ $('resultStars').innerHTML=[`完成${s.challenge?.spec.name||"打卡"}（${s.challenge?.progress||0} / ${s.challenge?.goal||3}）`,`通关且达到 ${CONFIG.scoreGoal} 分（${s.score}）`,`通关且任务失误不超过 2 次（本局 ${s.challenge?.errors||0} 次）`].map((text,i)=>`<div>${goals[i]?'★':'☆'} ${text}</div>`).join('');
  $('resultCards').textContent=`${CITY.name}手账：${collectedCount()} / 9 张${collectedCount()===9?' · 本城明信片已集齐':''} · 全国共 ${save.cards.length} / 450 张`;
  const next=CITIES[CITIES.indexOf(CITY)+1];$('nextCityBtn').hidden=!rating.passed||!next;if(next)$('nextCityBtn').textContent=`下一站：${next.name} →`;
  chargeOwner=null;gesture=null;renderGesture(s);$('result').showModal();if(rating.passed)sound.play('win');
@@ -99,11 +101,11 @@ const scene=new DartScene($('board'),{
  gesture:renderGesture,stable:()=>{if(!gesture?.cancel&&navigator.vibrate)navigator.vibrate(12);}
 });
 function syncLayout(){scene.setLayout();}
-function start(){show('play');syncCityUI();syncLayout();$('feedback').textContent='提前瞄准旋转目标，在绿色窗口松手';scene.start();}
+function start(){show('play');syncCityUI();syncLayout();$('feedback').textContent='阅读本关规则，按住滑动、松手投镖';scene.start();}
 
 function renderBook(){
  const stats=progress();$('bookTitle').textContent=CITY.name+'旅行手账';
- $('bookSummary').textContent=`本城已收集 ${collectedCount()} / 9 张 · ${stats.bestStars?'城市旅行印章已获得':'完成三项打卡，领取城市印章'} · 最佳 ${'★'.repeat(stats.bestStars)}${'☆'.repeat(3-stats.bestStars)} · 全国累计 ${save.cards.length} / 450 张`;
+ $('bookSummary').textContent=`本城已收集 ${collectedCount()} / 9 张 · ${stats.bestStars?'城市旅行印章已获得':'完成本关挑战，领取城市印章'} · 最佳 ${'★'.repeat(stats.bestStars)}${'☆'.repeat(3-stats.bestStars)} · 全国累计 ${save.cards.length} / 450 张`;
  $('bookCityTabs').innerHTML=routeButtons([CITY]);$('bookCitySelect').value=CITY.id;
  const filter=$('categoryFilter'),previous=filter.value,categories=[...new Set(cityCatalog().map(t=>STORIES[t.id].category))];
  filter.replaceChildren(new Option('全部类别','all'),...categories.map(c=>new Option(c,c)));
@@ -221,7 +223,7 @@ pad.addEventListener('pointerup',e=>{
 pad.addEventListener('pointercancel',e=>{if(e.pointerId===chargeOwner)cancelGesture('投掷已取消，飞镖未消耗');});
 pad.addEventListener('lostpointercapture',e=>{if(e.pointerId===chargeOwner)cancelGesture();});
 window.addEventListener('keydown',e=>{
- if(currentScreen!=='play'||!scene.active||$('result').open||$('targetCard').open)return;
+ if(currentScreen!=='play'||!scene.active||$('result').open||$('targetCard').open||$('challengeZoom').open)return;
  if(e.code==='Escape'){e.preventDefault();cancelGesture('已收回飞镖');}
  else if(e.code==='Space'){
   if(document.activeElement!==pad&&document.activeElement!==document.body)return;
@@ -237,3 +239,7 @@ window.addEventListener('resize',()=>{if(currentScreen==='play'){cancelGesture()
 $('rankingSource').href=RANKING.source;
 syncCityUI();
 updateHome();
+
+$('challengePhotoButton').onclick=()=>{if(!scene.active||scene.reading||scene.flight)return;cancelGesture();scene.pauseRotation();$('challengeZoomImage').src=$('challengePhoto').src;$('challengeZoom').showModal();};
+$('closeChallengeZoom').onclick=()=>$('challengeZoom').close();
+$('challengeZoom').addEventListener('close',()=>{if(scene.active&&!scene.reading){scene.resumeRotation();pad.focus({preventScroll:true});}});

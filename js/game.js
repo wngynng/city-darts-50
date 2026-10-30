@@ -82,13 +82,14 @@ class DartScene {
    image.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(cardArt(card.id));
   }
  }
- start(now=performance.now()){this.stop();this.prepareCityImages();this.active=true;this.reading=false;this.remaining=CONFIG.darts;this.score=0;this.hits=0;this.streak=0;this.maxStreak=0;this.collected=new Set();this.stuck=[];this.flight=null;this.charging=false;this.settle=0;this.lastMove=0;this.aim=boardPoint(20,130);this.rotationBase=0;this.rotationStarted=now;this.rotationPaused=false;this.rotationSpeed=rotationSpeedForLevel(CITIES.indexOf(CITY),CITIES.length)*(this.random()<.5?1:-1);this.rollWind(now);this.callbacks.change(this);this.frame(now);}
+ start(now=performance.now()){this.stop();this.prepareCityImages();this.active=true;this.reading=false;this.remaining=CONFIG.darts;this.score=0;this.hits=0;this.streak=0;this.maxStreak=0;this.collected=new Set();this.stuck=[];this.flight=null;this.charging=false;this.settle=0;this.lastMove=0;this.aim=boardPoint(20,130);this.rotationBase=0;this.rotationStarted=now;this.rotationPaused=false;this.rotationSpeed=rotationSpeedForLevel(CITIES.indexOf(CITY),CITIES.length)*(this.random()<.5?1:-1);this.challenge=typeof TravelChallenge!=="undefined"?new TravelChallenge(CITY,CITIES.indexOf(CITY)):null;if(this.challenge)this.rotationSpeed=this.challenge.spec.rotation*(CITIES.indexOf(CITY)%2?-1:1);this.rollWind(now);this.callbacks.change(this);this.frame(now);}
  stop(){this.pauseRotation();this.active=false;this.reading=false;this.charging=false;this.settle=0;this.flight=null;cancelAnimationFrame(this.raf);}
  rotationAt(now=performance.now()){return this.rotationBase+(this.rotationPaused?0:Math.max(0,now-this.rotationStarted)*this.rotationSpeed/1000);}
  pauseRotation(now=performance.now()){this.rotationBase=this.rotationAt(now);this.rotationPaused=true;}
  resumeRotation(now=performance.now()){this.rotationStarted=now;this.rotationPaused=false;}
  begin(now=performance.now()){
   if(!this.active||this.reading||this.flight||this.charging||this.remaining<=0)return false;
+  if(this.challenge?.previewing(this,now)){this.callbacks.message("先记住顺序，倒计时后开始");return false;}
   this.charging=true;this.holdStart=now;this.lastMove=now;this.settle=0;this.readyBuzz=false;
   this.callbacks.sound('charge');return true;
  }
@@ -120,16 +121,19 @@ class DartScene {
   if(now-this.holdStart<CONFIG.minHoldMs){this.cancel();this.callbacks.message('按住滑动瞄准，再松手投镖');return false;}
   const prediction=this.prediction(now),offset=sampleAimDisk(prediction.radius,this.random);
   this.flight={start:now,x:prediction.x+offset.x,y:prediction.y+offset.y,prediction,impactRotation:this.rotationAt(now+CONFIG.flightMs)};
+  if(this.challenge)this.flight.challenge=this.challenge.shot(this,now,this.flight);
   this.remaining--;this.charging=false;this.settle=0;
   this.callbacks.sound('throw');this.callbacks.message('飞镖飞行中…');this.callbacks.change(this);return true;
  }
  land(now){
-  const f=this.flight;if(!f)return;this.flight=null;const impactTime=f.start+CONFIG.flightMs,hit=scoreRotatedImpact(f.x,f.y,f.impactRotation);
+  const f=this.flight;if(!f)return;this.flight=null;const impactTime=f.start+CONFIG.flightMs,hit=f.challenge?.blocked?{target:null,points:0,bull:false}:scoreRotatedImpact(f.x,f.y,f.impactRotation);
+  const taskMessage=this.challenge?.apply(hit.target?.id,f.challenge||{});
   this.stuck.push({x:f.x,y:f.y,local:rotateBoardPoint(f,-f.impactRotation),rotation:f.impactRotation,time:now,hit:!!hit.target});
   this.score+=hit.points;this.streak=hit.bull?this.streak+1:0;this.maxStreak=Math.max(this.maxStreak,this.streak);
   const firstThisRound=hit.target&&!this.collected.has(hit.target.id);
   if(hit.target){this.hits++;this.collected.add(hit.target.id);this.callbacks.collect(hit.target.id);this.callbacks.sound(hit.bull?'bull':'hit');this.callbacks.message(`${hit.label} · ${hit.target.name} +${hit.points}${this.streak>1?' · 连续牛眼 '+this.streak:''}`);}
   else{this.callbacks.sound('miss');this.callbacks.message('擦肩而过 · 看落点调整下一镖');}
+  if(taskMessage)this.callbacks.message(taskMessage);
   this.reading=!!hit.target;
   if(hit.target||this.remaining===0){this.rotationBase=f.impactRotation;this.rotationPaused=true;}
   this.callbacks.change(this);
@@ -235,8 +239,9 @@ class DartScene {
   for(let i=0;i<20;i++){const a=-Math.PI/2+i*Math.PI/10+rotation;c.drawImage(this.numberLabels[i],DARTBOARD.cx+Math.cos(a)*322-15,DARTBOARD.cy+Math.sin(a)*322-12);}
   for(const g of this.cardGroups){const a=-Math.PI/2+(g.start+g.end)/2*Math.PI/10+rotation;c.drawImage(this.cardLabels[g.id],DARTBOARD.cx+Math.cos(a)*222-105,DARTBOARD.cy+Math.sin(a)*222-105);}
   c.drawImage(this.hubCache,0,0);
+  if(this.challenge)drawChallengeBoard(this,c,now);
   for(const d of this.stuck){const p=d.hit?rotateBoardPoint(d.local,rotation):d,age=Math.max(0,now-d.time);this.drawDart(c,p.x,p.y,.72,age<400?Math.sin(age*.08)*.12*(1-age/400):0,d.hit?rotation-d.rotation:0);if(age<700){c.strokeStyle=d.hit?'#f9f1c9':'#8e644a';c.lineWidth=2;c.globalAlpha=1-age/700;c.beginPath();c.arc(p.x,p.y,8+age/24,0,Math.PI*2);c.stroke();c.globalAlpha=1;}}
-  if(this.flight){const f=this.flight,t=clamp((now-f.start)/CONFIG.flightMs,0,1),x=this.width*.55+(f.x-this.width*.55)*t,y=this.height+30+(f.y-this.height-30)*t-Math.sin(t*Math.PI)*85;this.drawDart(c,x,y,1.9-t*1.18);}
+  if(this.flight){const f=this.flight,t=clamp((now-f.start)/CONFIG.flightMs,0,1),x=this.width*.55+(f.x-this.width*.55)*t,y=this.height+30+(f.y-this.height-30)*t-Math.sin(t*Math.PI)*85;if(f.challenge?.path){const p=f.challenge.path,u=t<.5?t*2:(t-.5)*2,a=t<.5?p[0]:p[1],b=t<.5?p[1]:p[2];this.drawDart(c,a.x+(b.x-a.x)*u,a.y+(b.y-a.y)*u,1.9-t*1.18);}else this.drawDart(c,x,y,1.9-t*1.18);}
   else if(this.active){const a=this.prediction(now),stable=this.charging&&a.timing.best,tired=this.charging&&a.timing.stage==='fatigue';c.save();c.beginPath();c.arc(a.x,a.y,a.radius,0,Math.PI*2);c.fillStyle=tired?'#ec805d55':stable?'#f4ce584d':'#fff9e84d';c.fill();c.strokeStyle='#263d3799';c.lineWidth=5;c.stroke();c.strokeStyle=tired?'#ffab80':stable?'#ffd56b':'#fff9e8';c.lineWidth=2.5;c.setLineDash([5,3]);c.stroke();c.restore();
    c.save();c.translate(this.width-85,this.height-1);c.fillStyle='#d6aa7b';c.beginPath();c.ellipse(0,0,25,48,-.3,0,Math.PI*2);c.fill();c.restore();this.drawDart(c,this.width-100,this.height-38+(this.charging?6:0),1.2);
   }

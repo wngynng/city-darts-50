@@ -105,6 +105,6 @@ function scoreImpact(x,y){
  const multiplier=r>=b.doubleInner-1e-9?2:r>=b.trebleInner-1e-9&&r<=b.trebleOuter+1e-9?3:1;
  return {target:CATALOG.find(t=>t.id===b.topics[index]),points:number*multiplier,bull:false,number,multiplier,label:`${multiplier===3?'三倍':multiplier===2?'双倍':'单倍'} ${number}`};
 }
-function rateRound(round){const passed=CITY.required.every(id=>round.collected.has(id));return{passed,stars:passed?1+Number(round.score>=CONFIG.scoreGoal)+Number(round.maxStreak>=CONFIG.streakGoal):0};}
+function rateRound(round){const passed=round.challenge?!!round.challenge.done:CITY.required.every(id=>round.collected.has(id));return{passed,stars:passed?1+Number(round.score>=CONFIG.scoreGoal)+Number(round.challenge?round.challenge.errors<=2:round.maxStreak>=CONFIG.streakGoal):0};}
 function rotateBoardPoint(point,angle){const dx=point.x-DARTBOARD.cx,dy=point.y-DARTBOARD.cy;return{x:DARTBOARD.cx+dx*Math.cos(angle)-dy*Math.sin(angle),y:DARTBOARD.cy+dx*Math.sin(angle)+dy*Math.cos(angle)};}
 function scoreRotatedImpact(x,y,rotation){const p=rotateBoardPoint({x,y},-rotation);return scoreImpact(p.x,p.y);}
